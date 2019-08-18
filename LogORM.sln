@@ -1,0 +1,56 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 15
+VisualStudioVersion = 15.0.28307.539
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Resource", "Resource", "{0FFA1B33-2D23-479C-8FA3-53024C97DC60}"
+	ProjectSection(SolutionItems) = preProject
+		Resource\ReadMe.md = Resource\ReadMe.md
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Doc", "Doc", "{B3C85D04-FB42-4D07-BF05-5DA8F7477BB9}"
+	ProjectSection(SolutionItems) = preProject
+		Resource\Doc\TargetFrameworks.txt = Resource\Doc\TargetFrameworks.txt
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Icon", "Icon", "{5F691368-3019-45CB-821D-5BB4F17A48A9}"
+	ProjectSection(SolutionItems) = preProject
+		Resource\Icon\LogORM64.ico = Resource\Icon\LogORM64.ico
+	EndProjectSection
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LogORMWeb_net45", "LogORMWeb_net45\LogORMWeb_net45.csproj", "{06600000-9B49-4660-9832-B5852F8C6207}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "LogORM", "LogORM\LogORM.csproj", "{7803ED4F-F6D5-48AC-A6CB-9C8A57C92A3B}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "LogORMWeb_DNC", "LogORMWeb_DNC\LogORMWeb_DNC.csproj", "{40B6A777-556D-4B22-8EC7-86F8997F3118}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{06600000-9B49-4660-9832-B5852F8C6207}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{06600000-9B49-4660-9832-B5852F8C6207}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{06600000-9B49-4660-9832-B5852F8C6207}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{06600000-9B49-4660-9832-B5852F8C6207}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7803ED4F-F6D5-48AC-A6CB-9C8A57C92A3B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7803ED4F-F6D5-48AC-A6CB-9C8A57C92A3B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7803ED4F-F6D5-48AC-A6CB-9C8A57C92A3B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7803ED4F-F6D5-48AC-A6CB-9C8A57C92A3B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{40B6A777-556D-4B22-8EC7-86F8997F3118}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{40B6A777-556D-4B22-8EC7-86F8997F3118}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{40B6A777-556D-4B22-8EC7-86F8997F3118}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{40B6A777-556D-4B22-8EC7-86F8997F3118}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{B3C85D04-FB42-4D07-BF05-5DA8F7477BB9} = {0FFA1B33-2D23-479C-8FA3-53024C97DC60}
+		{5F691368-3019-45CB-821D-5BB4F17A48A9} = {0FFA1B33-2D23-479C-8FA3-53024C97DC60}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {DB34597F-69CB-45BD-902B-108097ECDCBF}
+	EndGlobalSection
+EndGlobal
