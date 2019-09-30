@@ -15,6 +15,7 @@ namespace LogORMWeb_net45.Controllers
     {
         public ActionResult Index()
         {
+            var nums = Log2Net.LogApi.GetNumOfOnLineAllVisit();
             return View();
         }
 
@@ -81,13 +82,13 @@ namespace LogORMWeb_net45.Controllers
 
             List<AddUpdateDelEdm> AddUpdateDelEdms = new List<AddUpdateDelEdm>();
             AddUpdateDelEdms.Add(new AddUpdateDelEdm() { TableName = "Log_OperateTrace", Datas = new List<object>() { curAddLog } });
-            var resBtAdd = curDal.AddUpdateDelete(AddUpdateDelEdms, new DBOperUser() { UserId = "CN1234", UserName = "韩梅梅" });
+            var resBtAdd = curDal.AddUpdateDelete( new DBOperUser() { UserId = "CN1234", UserName = "韩梅梅" }, AddUpdateDelEdms.ToArray());
 
             //以下为更新
             AddUpdateDelEdms.Add(new AddUpdateDelEdm() { TableName = "Log_OperateTrace", Datas = selectModels });
             AddUpdateDelEdms[0].Datas = (selectModels);
             AddUpdateDelEdms[0].UpdateFD = new List<Dictionary<string, string>> { new Dictionary<string, string> { { "ServerIP", "1.1.1.1" } } };
-            var resBtUpdate = curDal.AddUpdateDelete(AddUpdateDelEdms, new DBOperUser() { UserId = "CN12348", UserName = "Lucy" });
+            var resBtUpdate = curDal.AddUpdateDelete( new DBOperUser() { UserId = "CN12348", UserName = "Lucy" }, AddUpdateDelEdms.ToArray());
             #endregion 测试批量添加和更新
 
             #region 测试存储过程

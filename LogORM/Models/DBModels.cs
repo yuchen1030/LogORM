@@ -5,20 +5,27 @@ using System.Linq;
 using System.Linq.Expressions;
 
 namespace LogORM.Models
-{    
+{
     public class DBBasePara<T> where T : class
     {
-        public string DBType { get; set; }
-        public string TableName { get; set; }
+        // public string DBType { get; set; }
+        // public string TableName { get; set; }
     }
 
-       
-    public class SelectSql
+
+    //public class SelectSql
+    //{
+    //    public string Sql { get; set; }
+    //    public DbParameter[] PMS { get; internal set; }
+    //}
+
+
+    public class CRUDSql
     {
         public string Sql { get; set; }
-        public DbParameter[] PMS { get; internal set; }
-
+        public DbParameter[] PMS { get; set; }
     }
+
 
     public class SqlContianer
     {
@@ -34,14 +41,14 @@ namespace LogORM.Models
 
     public class AddDBPara<T> : DBBasePara<T> where T : class
     {
-        public AddDBPara()
-        {
-            SkipCols = new string[0];
-        }
+        //public AddDBPara()
+        //{
+        //    SkipCols = new string[0];
+        //}
 
 
         public T Model { get; set; }
-        public string[] SkipCols { get; set; }
+        //  public string[] SkipCols { get; set; }
 
     }
 
@@ -54,6 +61,7 @@ namespace LogORM.Models
             Datas = new List<object>();
         }
         public string TableName { get; set; }
+        public string MainFields { get; set; } //当是更新时，需要该字段：主键字段 + 需要更新的字段。
         public List<object> Datas { get; set; }
         public List<Dictionary<string, string>> UpdateFD { get; set; }
     }
@@ -108,11 +116,33 @@ namespace LogORM.Models
     public class ExeResEdm
     {
         public int ErrCode { get; set; }  //错误码，0为成功，1为失败，>1为具体的错误代码
-        public string ErrMsg { get; set; } //错误信息
         public string Module { get; set; } //模块
         public Exception ExBody { get; set; } //异常Exception
         public object ExeModel { get; set; }  //执行结果
         public int ExeNum { get; set; } //影响的行数
+
+        public string ErrMsg//错误信息
+        {
+            get
+            {
+                var detailMsg = "";
+                if (ExBody != null)
+                {
+                    if (ExBody.InnerException != null)
+                    {
+                        detailMsg = ExBody.Message + ",InnerException=" + ExBody.InnerException.Message;
+                    }
+                    else
+                    {
+                        detailMsg = ExBody.Message;
+                    }
+                }
+                var res = string.Join(" : ", new List<string>() { _errMsg, detailMsg }.Where(a => !string.IsNullOrEmpty(a)));
+                return res;
+            }
+            set { _errMsg = value; }
+        }
+        string _errMsg = "";
 
 
     }

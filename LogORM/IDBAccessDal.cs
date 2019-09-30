@@ -25,7 +25,7 @@ namespace LogORM
         ExeResEdm Update(List<T> list, List<Dictionary<string, string>> updateFDList, DBOperUser dbLogMsg = null, string strComFields = "*");
 
         //批量进行添加/更新/删除
-        ExeResEdm AddUpdateDelete(List<AddUpdateDelEdm> models, DBOperUser dbLogMsg = null);
+        ExeResEdm AddUpdateDelete( DBOperUser dbLogMsg = null, params AddUpdateDelEdm[] models);
 
         //根据id软删除
         ExeResEdm Delete(object id, DBOperUser dbLogMsg = null);
@@ -47,7 +47,7 @@ namespace LogORM
         ExeResEdm SoftDelete(Dictionary<string, object> whereParas, DBOperUser dbLogMsg = null);
 
         //执行Sql语句
-        ExeResEdm ExecuteNonQuery(string cmdText, LogTraceEdm logMsg, DBOperUser dbLogMsg = null, params DbParameter[] parameters);
+        ExeResEdm ExecuteNonQuery(string cmdText,DBOperUser dbLogMsg = null, params DbParameter[] parameters);
 
         //执行ExecuteScalar语句
         ExeResEdm ExecuteScalar(string cmdText, DBOperUser dbLogMsg = null, params DbParameter[] parameters);
@@ -70,8 +70,11 @@ namespace LogORM
         //获取一个数据表的表结构
         ExeResEdm SelectDBTableFormat( DBOperUser dbLogMsg = null ,string strField = "*");
 
-        //获取SQL语句
-        SelectSql GetSelectSql(T searchPara,  List<string> selectFields = null);
+        //获取查询的SQL语句
+        CRUDSql GetSelectSql(T searchPara,  List<string> selectFields = null);
+
+        //获取插入的SQL语句
+        CRUDSql GetInsertSql<M>(M model, string tableName, bool bParameterizedQuery);
 
         //检查指定条件的数据是否存在
         ExeResEdm Exist(Dictionary<string, object> whereParas, DBOperUser dbLogMsg = null);

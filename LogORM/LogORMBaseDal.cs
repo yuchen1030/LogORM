@@ -1,15 +1,19 @@
-﻿using Log2Net.Models;
-using LogORM.DbSqlProvider;
-
+﻿using LogORM.DbSqlProvider;
 using LogORM.AdoNet;
 using LogORM.AdoNet.Oracle;
 using LogORM.Models;
 using System;
 using System.Collections.Generic;
 using System.Data.Common;
+using System.Linq;
 
 namespace LogORM
 {
+
+    //logorm.MODELS独立出来，引用少
+    //CurrentDalParas 中增加 public bool IsDesc { get; set; }
+    //DBOperUser dbLogMsg  变为 DBOperUser dbOperUser
+    //是否SKIP GetDataSet方法 类的日志；    SkipQueryTypeLog
 
     public abstract class LogORMBaseDal<T> : ILogORMDal<T> where T : class
     {
@@ -28,14 +32,14 @@ namespace LogORM
         }
 
         protected abstract CurrentDalParas CurDalParas { get; }//抽象属性，要求子类必须实现
-        public ISqlProvider CurSqlProvider { get; }
+        public ISqlProvider CurSqlProvider = null;
         string tableName = "";
         string primaryKey = "";
         string[] skipCols = new string[] { "" };
         List<string> updateKeys = new List<string>() { "" };
         List<string> deleteKeys = new List<string>() { "" };
         Dictionary<string, object> softDelFalg = new Dictionary<string, object>() { };
-        string orderby = "";
+        string orderby = "";//分页的排序字段，包括字段和顺序，例如 a1 asc, a2 desc
         string conStr = "";
         IAdoNetBase<T> baseDB = null;
 
@@ -49,9 +53,8 @@ namespace LogORM
             public List<string> UpdateKeys { get; set; }
             public List<string> DeleteKeys { get; set; }
             public Dictionary<string, object> SoftDelFalg { get; set; }
-            public string Orderby { get; set; }//排序时使用
+            public string Orderby { get; set; }//分页的排序字段，包括字段和顺序，例如 a1 asc, a2 desc
             public IAdoNetBase<T> AdoNetBase { get; set; }
-
         }
 
         void GetBaseDBByDBType()
@@ -120,9 +123,13 @@ namespace LogORM
         }
 
         //批量进行添加/更新/删除
-        public ExeResEdm AddUpdateDelete(List<AddUpdateDelEdm> models, DBOperUser dbLogMsg = null)
+        public ExeResEdm AddUpdateDelete(DBOperUser dbLogMsg = null, params AddUpdateDelEdm[] models)
         {
-            return baseDB.AddUpdateDelete(models, dbLogMsg);
+            if (models != null && models.Length > 0)
+            {
+                models = models.Select(a => { a.TableName = !string.IsNullOrEmpty(a.TableName) ? a.TableName : tableName; return a; }).ToArray();
+            }
+            return baseDB.AddUpdateDelete(dbLogMsg, models);
         }
 
         //根据id删除
@@ -178,9 +185,9 @@ namespace LogORM
         }
 
         //执行Sql语句
-        public ExeResEdm ExecuteNonQuery(string cmdText, LogTraceEdm logMsg, DBOperUser dbLogMsg = null, params DbParameter[] parameters)
+        public ExeResEdm ExecuteNonQuery(string cmdText, DBOperUser dbLogMsg = null, params DbParameter[] parameters)
         {
-            return baseDB.ExecuteNonQuery(cmdText, logMsg, parameters);
+            return baseDB.ExecuteNonQuery(cmdText, dbLogMsg, parameters);
         }
 
         //执行ExecuteScalar语句
@@ -211,13 +218,25 @@ namespace LogORM
         //获取DataSet数据
         public ExeResEdm GetDataSet(List<SqlContianer> ltSqls, DBOperUser dbLogMsg = null)
         {
+            ltSqls = ltSqls ?? new List<SqlContianer>();
+            ltSqls = ltSqls.Select(a => { var tb = ComDBFun.GetTableNameFromSelectSql(a.strSqlTxt); if (string.IsNullOrEmpty(tb)) a.strSqlTxt = "select * from " + tableName + " where " + a.strSqlTxt; return a; }).ToList();
             return baseDB.GetDataSet(ltSqls, dbLogMsg);
         }
 
         //获取DataSet数据
         public ExeResEdm GetDataSet(string cmdText, DBOperUser dbLogMsg = null, params DbParameter[] parameters)
         {
-            return baseDB.GetDataSet(tableName, dbLogMsg, parameters);
+            string sql = "";
+            cmdText = cmdText ?? "";
+            if (cmdText.StartsWith("select", StringComparison.OrdinalIgnoreCase))
+            {
+                sql = cmdText;
+            }
+            else
+            {
+                sql += " where " + cmdText;
+            }
+            return baseDB.GetDataSet(cmdText, dbLogMsg, parameters);
         }
 
         //获取一个数据表的表结构
@@ -227,9 +246,15 @@ namespace LogORM
         }
 
         //获取SQL语句
-        public SelectSql GetSelectSql(T searchPara, List<string> selectFields = null)
+        public CRUDSql GetSelectSql(T searchPara, List<string> selectFields = null)
         {
             return baseDB.GetSelectSql(searchPara, tableName, orderby, selectFields);
+        }
+
+        //获取插入的SQL语句
+        public CRUDSql GetInsertSql<M>(M model, string tableName, bool bParameterizedQuery)
+        {
+            return baseDB.GetInsertSql(model, tableName, bParameterizedQuery);
         }
 
         //检查指定条件的数据是否存在

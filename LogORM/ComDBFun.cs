@@ -36,13 +36,12 @@ namespace LogORM
             rightSuf = dBBaseAttr.RightSuf;
         }
 
-
         string paraChar = "@"; // define parameter sign
         string leftPre = "";
         string rightSuf = "";
 
         //获取数据库连接字符串
-        public static string GetConnectionString(string sqlStrKey)
+        internal static string GetConnectionString(string sqlStrKey)
         {
             //if (AppConfig.GetFinalConfig("ConnectStrInCode", false, false))
             //{
@@ -74,7 +73,7 @@ namespace LogORM
         //}
 
 
-    //    static Dictionary<DBType, DBGeneral> DBGeneralDic = new Dictionary<DBType, DBGeneral>();
+        //    static Dictionary<DBType, DBGeneral> DBGeneralDic = new Dictionary<DBType, DBGeneral>();
 
         //public static DBGeneral GetDBGeneralInfo(DBType dbType)
         //{
@@ -113,26 +112,37 @@ namespace LogORM
         //    return dBGeneral;
         //}
 
-        public string GetSQLText(List<string> colNames)
+        internal string GetSQLText(List<string> colNames, List<object> values)
         {
             if (colNames == null || colNames.Count <= 0)
             {
                 return "";
             }
-
             StringBuilder sb = new StringBuilder("(" + leftPre);
             sb.Append(string.Join(rightSuf + "," + leftPre, colNames));
             sb.Append(rightSuf + ")");
-            string[] colParamNames = GetColumnNames(colNames, paraChar);  //得到数组形式的@列名    
 
+            //string[] colParamNames = GetColumnNames(colNames, paraChar);  //得到数组形式的@列名    
+            ////sb.Append(" values([").Append(string.Join("],[", colParamNames)).Append("])");//values([@UserName],[@UserPWD])
+            //sb.Append(" values(").Append(string.Join(",", colParamNames)).Append(")"); //values(@UserName,@UserPWD)
+            //return sb.ToString();
+
+            string valuesSql = "";
+            if (values == null || values.Count <= 0)
+            {
+                string[] colParamNames = GetColumnNames(colNames, paraChar);  //得到数组形式的@列名  
+                valuesSql = string.Join(",", colParamNames);
+            }
+            else
+            {
+                valuesSql = "'" + string.Join("','", values) + "'";
+            }
             //sb.Append(" values([").Append(string.Join("],[", colParamNames)).Append("])");//values([@UserName],[@UserPWD])
-            sb.Append(" values(").Append(string.Join(",", colParamNames)).Append(")"); //values(@UserName,@UserPWD)
+            sb.Append(" values(").Append(valuesSql).Append(")"); //values(@UserName,@UserPWD)
             return sb.ToString();
         }
 
-
-
-        public string GetUpdateSQLText(List<string> colNames)
+        internal string GetUpdateSQLText(List<string> colNames)
         {
             if (colNames == null || colNames.Count <= 0)
             {
@@ -147,10 +157,7 @@ namespace LogORM
             return sb.ToString().TrimEnd(',');
         }
 
-
-
-
-        public string GetWhereCondition(List<string> colNames, string and_or, params Dictionary<string, object>[] kvDic)
+        internal string GetWhereCondition(List<string> colNames, string and_or, params Dictionary<string, object>[] kvDic)
         {
             if (colNames == null || colNames.Count <= 0)
             {
@@ -196,7 +203,7 @@ namespace LogORM
             return result;
         }
 
-        public string[] GetColumnNames(List<string> colNames, string preFlag) ////得到数组形式的@列名
+        internal string[] GetColumnNames(List<string> colNames, string preFlag) ////得到数组形式的@列名
         {
             if (colNames == null || colNames.Count <= 0)
             {
@@ -210,17 +217,24 @@ namespace LogORM
             return colnames;
         }
 
-        public static string RemoveSpecialChar(string text)    //处理 "小时数/天数"之类的列名
+        internal static string RemoveSpecialChar(string text)    //处理 "小时数/天数"之类的列名
         {
             text = text.Replace(' ', '_').Replace('/', '_').Replace('\\', '_').Replace('(', '_').Replace(')', '_').
                 Replace('[', '_').Replace(']', '_').Trim();//最好用正则表达式匹配
             return text;
         }
 
-
-
-
-
+        internal static string GetTableNameFromSelectSql(string selectSql)
+        {
+            if (!string.IsNullOrEmpty(selectSql) && selectSql.Trim().StartsWith("select ", StringComparison.OrdinalIgnoreCase))
+            {
+                string fromKey = " from ";
+                int index = selectSql.IndexOf(fromKey, StringComparison.OrdinalIgnoreCase);
+                var tb = selectSql.Substring(index + fromKey.Length).Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries)[0].Trim();
+                return tb;
+            }
+            return "";
+        }
     }
 
 

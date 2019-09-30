@@ -116,7 +116,7 @@ namespace LogORM.AdoNet
         }
 
 
-        protected override ExeResEdm UpdateDsToDB(DataSet dsTables, Dictionary<string, string> dicDtFields = null)
+        protected override ExeResEdm UpdateDsToDB(DataSet dsTables, Dictionary<string, string> dicDtMainFields = null)
         {
             ExeResEdm dBResEdm = new ExeResEdm();
             int n = 0;
@@ -133,9 +133,9 @@ namespace LogORM.AdoNet
                         foreach (DataTable dtTemp in dsTables.Tables)
                         {
                             string strComFields = "*";
-                            if (dicDtFields != null && dicDtFields.Count > 0 && dicDtFields.ContainsKey(dtTemp.TableName))
+                            if (dicDtMainFields != null && dicDtMainFields.Count > 0 && dicDtMainFields.ContainsKey(dtTemp.TableName))
                             {
-                                strComFields = dicDtFields[dtTemp.TableName];
+                                strComFields = dicDtMainFields[dtTemp.TableName];
                             }
                             cmd.CommandText = GetColumnsNameSql(dtTemp.TableName, strComFields);
                             cmd.Transaction = tsOprate;
@@ -153,7 +153,7 @@ namespace LogORM.AdoNet
                                 adapter.DeleteCommand = new SqlCommandBuilder(adapter).GetDeleteCommand();
                                 for (int i = dtTemp.Rows.Count - 1; i >= 0; i--)
                                 {
-                                     dtTemp.Rows[i].Delete();          
+                                    dtTemp.Rows[i].Delete();
                                 }
                                 n += adapter.Update(dtTemp);
                             }
@@ -205,6 +205,7 @@ namespace LogORM.AdoNet
                             cmd.Parameters.Clear();
                             cmd.Parameters.AddRange(objOraSqlCon.ltOraParams.ToArray());
                             int intRes = cmd.ExecuteNonQuery();
+                            dBResEdm.ExeNum += intRes;
                             if (objOraSqlCon.intExpectNums >= 0)
                             {
                                 if (intRes != objOraSqlCon.intExpectNums)
@@ -253,6 +254,7 @@ namespace LogORM.AdoNet
                     {
                         SqlCommand cmd = conn.CreateCommand();
                         cmd.Transaction = tsOprate;
+                        List<string> tbNames = new List<string>();
                         foreach (var objOraSqlCon in ltSqls)
                         {
                             DataTable dt = new DataTable();
@@ -268,6 +270,12 @@ namespace LogORM.AdoNet
                                     dt.TableName = tb;
                                 }
                             }
+                            if (tbNames.Contains(dt.TableName))
+                            {
+                                dt.TableName = dt.TableName + "_" + (tbNames.Count() + 1);
+                            }
+                            tbNames.Add(dt.TableName);
+
                             cmd.CommandText = objOraSqlCon.strSqlTxt;
                             cmd.Parameters.Clear();
                             if (objOraSqlCon.ltOraParams != null && objOraSqlCon.ltOraParams.Count > 0)
@@ -316,7 +324,7 @@ namespace LogORM.AdoNet
         }
 
 
-        protected override SelectSql MakeConditionFieldForIn(List<string> ltDataVals)
+        protected override CRUDSql MakeConditionFieldForIn(List<string> ltDataVals)
         {
             return null;
         }

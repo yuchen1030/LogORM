@@ -31,7 +31,7 @@ namespace LogORM.AdoNet
         ExeResEdm Update(string tableName, List<T> list, List<Dictionary<string, string>> updateFDList, DBOperUser dbLogMsg = null, string strComFields = "*");
 
         //批量进行添加/更新/删除
-        ExeResEdm AddUpdateDelete(List<AddUpdateDelEdm> models, DBOperUser dbLogMsg = null);
+        ExeResEdm AddUpdateDelete(DBOperUser dbLogMsg = null, params AddUpdateDelEdm[] models);
 
         //删除某个实体
         ExeResEdm Delete(string tableName, T model, List<string> whereParas, DBOperUser dbLogMsg = null);
@@ -46,7 +46,7 @@ namespace LogORM.AdoNet
         ExeResEdm SoftDelete(string tableName, Dictionary<string, object> whereParas, Dictionary<string, object> softDelFalg, DBOperUser dbLogMsg = null);
 
         //执行Sql语句
-        ExeResEdm ExecuteNonQuery(string cmdText, LogTraceEdm logMsg, params DbParameter[] parameters);
+        ExeResEdm ExecuteNonQuery(string cmdText, DBOperUser DBOperUser, params DbParameter[] parameters);
 
         //执行ExecuteScalar语句
         ExeResEdm ExecuteScalar(string cmdText, DBOperUser dbLogMsg = null, params DbParameter[] parameters);
@@ -69,8 +69,11 @@ namespace LogORM.AdoNet
         //获取一个数据表的表结构
         ExeResEdm SelectDBTableFormat(string tableName, DBOperUser dbLogMsg = null, string strField = "*");
 
-        //获取SQL语句
-        SelectSql GetSelectSql(T searchPara, string tableName, string orderBy, List<string> selectFields = null);
+        //获取查询的SQL语句
+        CRUDSql GetSelectSql(T searchPara, string tableName, string orderBy, List<string> selectFields = null);
+
+        //获取插入的SQL语句
+        CRUDSql GetInsertSql<M>(M model, string tableName, bool bParameterizedQuery);
 
         //检查指定条件的数据是否存在
         ExeResEdm Exist(string tableName, Dictionary<string, object> whereParas, DBOperUser dbLogMsg = null);
@@ -116,7 +119,7 @@ namespace LogORM.AdoNet
                 }
             }
             ComDBFun ComDBFun = new ComDBFun(DBBaseAttr);
-            string textParas = ComDBFun.GetSQLText(dic.Keys.ToList());
+            string textParas = ComDBFun.GetSQLText(dic.Keys.ToList(), null);
             string sql = "insert into " + tableName + textParas;
 
             DbParameter[] pms = GetDbParametersFromDic(dic);
@@ -204,17 +207,28 @@ namespace LogORM.AdoNet
             return res;
         }
 
-        public ExeResEdm AddUpdateDelete(List<AddUpdateDelEdm> models, DBOperUser dbLogMsg = null)
+        public ExeResEdm AddUpdateDelete(DBOperUser dbLogMsg = null, params AddUpdateDelEdm[] datas)
         {
             DataSet ds = new DataSet();
+            if (datas == null || datas.Length <= 0)
+            {
+                return new ExeResEdm() { ErrCode = 1, Module = "AddUpdateDelete方法", ErrMsg = "没有有效的参数", };
+            }
+            datas = datas.Where(a => a.Datas != null && a.Datas.Count > 0).ToArray();
+            if (datas.Length <= 0)
+            {
+                return new ExeResEdm() { ErrCode = 1, Module = "AddUpdateDelete方法", ErrMsg = "没有有效的参数", };
+            }
+            var models = datas.ToList();
             //若TableName相同，则合并
-            models = models.Select(a => { a.TableName = a.TableName.ToLower().Trim(); return a; }).ToList();
+            models = models.Select(a => { a.TableName = a.TableName.Trim().ToLower().Trim(); return a; }).ToList();
             var groups = models.GroupBy(a => a.TableName).ToList();
             List<AddUpdateDelEdm> realModels = new List<AddUpdateDelEdm>();
+            Dictionary<string, string> dtPKs = new Dictionary<string, string>();
             models.Clear();
             foreach (var item in groups)
             {
-                AddUpdateDelEdm cur = new AddUpdateDelEdm() { TableName = item.Key };
+                AddUpdateDelEdm cur = new AddUpdateDelEdm() { TableName = item.Key, };
                 cur.Datas = new List<object>();
                 cur.UpdateFD = new List<Dictionary<string, string>>();
                 var itemList = item.ToList();
@@ -222,6 +236,7 @@ namespace LogORM.AdoNet
                 for (int i = 0; i < itemList.Count; i++)
                 {
                     var m = itemList[i];
+                    cur.MainFields = !string.IsNullOrEmpty(m.MainFields) ? m.MainFields : cur.MainFields;
                     if (m.UpdateFD != null && m.UpdateFD.Count == m.Datas.Count)
                     {
                         cur.Datas.AddRange(m.Datas);
@@ -235,7 +250,7 @@ namespace LogORM.AdoNet
                             cur.Datas.Add(d);
                             if (m.UpdateFD == null || m.UpdateFD.Count <= 0)
                             {
-                                cur.UpdateFD.Add(new Dictionary<string, string>() { });
+                                //  cur.UpdateFD.Add(new Dictionary<string, string>() { });
                                 bAdd[i] = true;
                             }
                             else if (m.UpdateFD.Count == 1)
@@ -245,14 +260,14 @@ namespace LogORM.AdoNet
                             }
                         }
                     }
+                    dtPKs.Add(cur.TableName, cur.MainFields);
                 }
                 if (bAdd.Distinct().Count() != 1)
                 {
                     ExeResEdm exeResEdm = new ExeResEdm()
                     {
                         ErrCode = 1,
-                        ExBody = new
-                         Exception("同一张表[" + item.Key + "]，不能同时有添加和更新操作"),
+                        ExBody = new Exception("同一张表[" + item.Key + "]，不能同时有添加和更新操作"),
                         Module = "AddUpdate 方法",
                     };
                     return exeResEdm;
@@ -263,11 +278,15 @@ namespace LogORM.AdoNet
             //获取所有的datatable模板         
             List<SqlContianer> ltSqls = models.Select(a => new SqlContianer() { tableName = a.TableName, strSqlTxt = GetColumnsNameSql(a.TableName) }).ToList();
             var dsTemplate = GetDataSets(ltSqls).ExeModel as DataSet;
+            if (dsTemplate == null || dsTemplate.Tables.Count <= 0)
+            {
+                return new ExeResEdm() { ErrCode = 1, ErrMsg = "未获取到数据", Module = "AddUpdateDelete方法" };
+            }
             foreach (var item in models)
             {
                 DataTable dt = new DataTable();
                 DataTable dtTemplate = dsTemplate.Tables[item.TableName];
-                if (item.UpdateFD == null)
+                if (item.UpdateFD == null || item.UpdateFD.Count == 0)
                 {
                     dt = GetDataTable(item.TableName, dtTemplate, item.Datas);
                 }
@@ -281,7 +300,8 @@ namespace LogORM.AdoNet
                 }
                 ds.Tables.Add(dt);
             }
-            var res = UpdateDsToDB(ds);
+
+            var res = UpdateDsToDB(ds, dtPKs);
             WriteLogMsg(dbLogMsg, LogType.批量增删改, "参数为：" + DtModelConvert<List<AddUpdateDelEdm>>.SerializeToString(models) + "，受影响的行数为" + res.ExeNum, "AddUpdateDelete方法");
             return res;
         }
@@ -326,15 +346,15 @@ namespace LogORM.AdoNet
             return Update(tableName, whereParas, softDelFalg);
         }
 
-        public ExeResEdm ExecuteNonQuery(string cmdText, LogTraceEdm logMsg, params DbParameter[] parameters)
+        public ExeResEdm ExecuteNonQuery(string cmdText, DBOperUser dbOperUser = null, params DbParameter[] parameters)
         {
-            ExeResEdm dBResEdm = SqlCMD(cmdText, cmd => cmd.ExecuteNonQuery(), parameters);
-            if (dBResEdm.ErrCode == 0)
+            LogTraceEdm logMsg = null;
+            if (dbOperUser != null)
             {
-                dBResEdm.ExeNum = Convert.ToInt32(dBResEdm.ExeModel);
+                logMsg = new LogTraceEdm() { LogType = LogType.ExecuteNonQuery, UserId = dbOperUser.UserId, UserName = dbOperUser.UserName, TabOrModu = "ExecuteNonQuery方法", };
             }
-            WriteLogMsg(logMsg, dBResEdm.ExeNum, GetRealSql(cmdText, parameters));
-            return dBResEdm;
+            var n = ExecuteNonQuery(cmdText, logMsg, parameters);
+            return n;
         }
 
         public ExeResEdm ExecuteScalar(string cmdText, DBOperUser dbLogMsg = null, params DbParameter[] parameters)
@@ -432,7 +452,8 @@ namespace LogORM.AdoNet
             DataSet ds = new DataSet();
             parameters = ParameterPrepare(parameters);
             var res = SqlCMD_DT(cmdText, CommandType.Text, adt => adt.Fill(ds), parameters);
-            res.ExeModel = ds;
+            res.ExeModel = ds.Copy();
+            res.ExeNum = ds.Tables.Count;
             WriteLogMsg(dbLogMsg, LogType.查询, "根据" + GetRealSql(cmdText, parameters) + "获取了" + ds.Tables.Count + "张表", "GetDataSet方法");
             return res;
         }
@@ -445,13 +466,13 @@ namespace LogORM.AdoNet
             return dtFb;
         }
 
-        public SelectSql GetSelectSql(T searchPara, string tableName, string orderBy, List<string> selectFields = null)
+
+        public CRUDSql GetSelectSql(T searchPara, string tableName, string orderBy, List<string> selectFields = null)
         {
             //  ComDBFun ComDBFun = new ComDBFun(bOrcl);
             Dictionary<string, object> dic = DtModelConvert<T>.GetPropertity(searchPara);
             List<string> whereParas = dic.Keys.ToList();
             object[] values = dic.Values.ToArray();
-            // List<string> whereParasTemp = whereParas.ToList();//要重新定义变量，因为要修改whereParas
             for (int i = dic.Values.Count - 1; i >= 0; i--)//比较值为空的不参与比较
             {
                 if (dic.Values.ToList()[i] == null || string.IsNullOrEmpty(dic.Values.ToList()[i].ToString()))
@@ -464,13 +485,27 @@ namespace LogORM.AdoNet
             string fds = (selectFields == null || selectFields.Count <= 0) ? "*" : string.Join(",", selectFields);
             orderBy = string.IsNullOrEmpty(orderBy) ? "" : "order by " + orderBy;
             string sql = string.Format("select {0} from {1} {2} {3}", fds, tableName, whereSql, orderBy);
-            SelectSql res = new SelectSql() { Sql = sql };
-
+            CRUDSql res = new CRUDSql() { Sql = sql };
             res.PMS = GetDbParametersFromDic(dic);
-
-
             return res;
         }
+
+
+        public CRUDSql GetInsertSql<M>(M model, string tableName, bool bParameterizedQuery)
+        {
+            Dictionary<string, object> dic = DtModelConvert<T>.GetPropertity(model);
+            ComDBFun ComDBFun = new ComDBFun(DBBaseAttr);
+
+            string textParas = ComDBFun.GetSQLText(dic.Keys.ToList(), (bParameterizedQuery ? null : dic.Values.ToList()));
+            string sql = "insert into " + tableName + textParas;
+            CRUDSql insertSql = new CRUDSql() { Sql = sql };
+            if (bParameterizedQuery)
+            {
+                insertSql.PMS = GetDbParametersFromDic(dic);
+            }
+            return insertSql;
+        }
+
 
         public ExeResEdm Exist(string tableName, Dictionary<string, object> whereParas, DBOperUser dbLogMsg = null)
         {
@@ -511,6 +546,18 @@ namespace LogORM.AdoNet
 
 
         #region 可继承的方法，子类方法 
+
+        protected ExeResEdm ExecuteNonQuery(string cmdText, LogTraceEdm logMsg, params DbParameter[] parameters)
+        {
+            ExeResEdm dBResEdm = SqlCMD(cmdText, cmd => cmd.ExecuteNonQuery(), parameters);
+            if (dBResEdm.ErrCode == 0)
+            {
+                dBResEdm.ExeNum = Convert.ToInt32(dBResEdm.ExeModel);
+            }
+            WriteLogMsg(logMsg, dBResEdm.ExeNum, GetRealSql(cmdText, parameters));
+            return dBResEdm;
+        }
+
         //SQL Server 和 oracle 可以使用此方法，MySQL不行
         protected virtual ExeResEdm GetDataByPage(string tableName, string strWhere, string orderby, int pageIndex, int pageSize, out int totalCnt)
         {
@@ -570,20 +617,13 @@ namespace LogORM.AdoNet
         //SQL Server 和 MySql 可以使用此方法，oracle 不行
         protected virtual string GetColumnsNameSql(string strTbName, string strField = "*")
         {
-            string strSqlTxt = "select top 0 " + strField + " from " + strTbName;
+            string strSqlTxt = "select top 0 " + strField.Trim().Trim(',') + " from " + strTbName;
             return strSqlTxt;
         }
 
         protected string GetTableNameFromSelectSql(string selectSql)
         {
-            if (!string.IsNullOrEmpty(selectSql) && selectSql.StartsWith("select ", StringComparison.OrdinalIgnoreCase))
-            {
-                string fromKey = " from ";
-                int index = selectSql.IndexOf(fromKey, StringComparison.OrdinalIgnoreCase);
-                var tb = selectSql.Substring(index + fromKey.Length).Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries)[0].Trim();
-                return tb;
-            }
-            return "";
+            return ComDBFun.GetTableNameFromSelectSql(selectSql);
         }
 
         protected DbParameter[] GetDbParametersFromDic(Dictionary<string, object> dic)
@@ -606,6 +646,7 @@ namespace LogORM.AdoNet
 
 
         #endregion 可继承的方法，子类方法 
+
 
         #region 私有方法   
         protected object GetValue(object value)
@@ -757,6 +798,11 @@ namespace LogORM.AdoNet
 
         void WriteLogMsg(LogTraceEdm logMsg, object res, string keyID, params object[] values)
         {
+            var skip = Log2Net.Util.AppConfig.GetConfigValue("SkipQueryTypeLog");
+            if (logMsg.LogType == LogType.查询 && skip == "1")
+            {
+                return;
+            }
             if (logMsg != null && (!string.IsNullOrEmpty(logMsg.Detail) || !string.IsNullOrEmpty(logMsg.UserId + logMsg.UserName)))
             {
                 try
@@ -771,20 +817,22 @@ namespace LogORM.AdoNet
                         string str = "SQL/条件";
                         if (keyID.Contains("="))
                         {
-                          //  str = "语句";
+                            //  str = "语句";
                         }
                         string action = logMsg.LogType.ToString();
                         string msg = action + "了" + str + "为【" + keyID + "】的" + logMsg.TabOrModu + "记录" + valStr + "，结果为" + res + "。";
                         logMsg.Detail = msg;
                     }
-                    var tttt = Task.Factory.StartNew(() => Log2Net.LogApi.WriteLog(LogLevel.DBRec, logMsg));
+                    int maxLength = 2000;
+                    logMsg.Detail = logMsg.Detail.Substring(0, Math.Min(maxLength, logMsg.Detail.Length));//当字段过长时，截取前一部分，防止插入失败
+                    try { var logRes = Task.Factory.StartNew(() => Log2Net.LogApi.WriteLog(LogLevel.DBRec, logMsg)); } catch { }
                 }
                 catch (Exception ex)
                 {
                     var exModel = new
                     {
                         ErrMsg = "写数据失败",
-                        DBData = logMsg,                       
+                        DBData = logMsg,
                         Exception = ex.Message,
                         InnerException = ex.InnerException == null ? "" : ex.InnerException.Message
                     };
@@ -806,7 +854,7 @@ namespace LogORM.AdoNet
 
         protected abstract ExeResEdm UpdateDtToDB(DataTable dtInfos, string strComFields = "*");
 
-        protected abstract ExeResEdm UpdateDsToDB(DataSet dsTables, Dictionary<string, string> dicDtFields = null);
+        protected abstract ExeResEdm UpdateDsToDB(DataSet dsTables, Dictionary<string, string> dicDtMainFields = null);
 
         protected abstract ExeResEdm GetDataSets(List<SqlContianer> ltSqls);
 
@@ -816,7 +864,7 @@ namespace LogORM.AdoNet
 
         protected abstract DbParameter[] ParameterPrepare(DbParameter[] parameters);
 
-        protected abstract SelectSql MakeConditionFieldForIn(List<string> ltDataVals);
+        protected abstract CRUDSql MakeConditionFieldForIn(List<string> ltDataVals);
 
 
         #endregion 抽象方法

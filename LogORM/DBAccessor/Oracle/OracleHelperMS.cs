@@ -112,7 +112,7 @@ namespace LogORM.AdoNet.Oracle
             return dBResEdm;
         }
 
-        protected override ExeResEdm UpdateDsToDB(DataSet dsTables, Dictionary<string, string> dicDtFields = null)
+        protected override ExeResEdm UpdateDsToDB(DataSet dsTables, Dictionary<string, string> dicDtMainFields = null)
         {
             ExeResEdm dBResEdm = new ExeResEdm();
             int n = 0;
@@ -129,9 +129,9 @@ namespace LogORM.AdoNet.Oracle
                         foreach (DataTable dtTemp in dsTables.Tables)
                         {
                             string strComFields = "*";
-                            if (dicDtFields != null && dicDtFields.Count > 0 && dicDtFields.ContainsKey(dtTemp.TableName))
+                            if (dicDtMainFields != null && dicDtMainFields.Count > 0 && dicDtMainFields.ContainsKey(dtTemp.TableName))
                             {
-                                strComFields = dicDtFields[dtTemp.TableName];
+                                strComFields =  ! string.IsNullOrEmpty(dicDtMainFields[dtTemp.TableName]) ?    dicDtMainFields[dtTemp.TableName]: strComFields;
                             }
                             cmd.CommandText = GetColumnsNameSql(dtTemp.TableName, strComFields);
                             System.Data.OracleClient.OracleDataAdapter adapter = new System.Data.OracleClient.OracleDataAdapter(cmd);
@@ -201,6 +201,7 @@ namespace LogORM.AdoNet.Oracle
                             cmd.Parameters.Clear();
                             cmd.Parameters.AddRange(objOraSqlCon.ltOraParams.ToArray());
                             int intRes = cmd.ExecuteNonQuery();
+                            dBResEdm.ExeNum += intRes;
                             if (objOraSqlCon.intExpectNums >= 0)
                             {
                                 if (intRes != objOraSqlCon.intExpectNums)
@@ -232,7 +233,7 @@ namespace LogORM.AdoNet.Oracle
                 dBResEdm.ErrCode = 1;
                 return dBResEdm;
             }
-            return null;
+            return dBResEdm;
         }
 
         protected override ExeResEdm GetDataSets(List<SqlContianer> ltSqls)
@@ -249,6 +250,7 @@ namespace LogORM.AdoNet.Oracle
                     {
                         System.Data.OracleClient.OracleCommand cmd = conn.CreateCommand();
                         cmd.Transaction = tsOprate;
+                        List<string> tbNames = new List<string>();
                         foreach (var objOraSqlCon in ltSqls)
                         {
                             DataTable dt = new DataTable();
@@ -264,6 +266,11 @@ namespace LogORM.AdoNet.Oracle
                                     dt.TableName = tb;
                                 }
                             }
+                            if (tbNames.Contains(dt.TableName))
+                            {
+                                dt.TableName = dt.TableName + "_" + (tbNames.Count() + 1);
+                            }
+                            tbNames.Add(dt.TableName);
                             cmd.CommandText = objOraSqlCon.strSqlTxt;
                             cmd.Parameters.Clear();
                             if (objOraSqlCon.ltOraParams != null && objOraSqlCon.ltOraParams.Count > 0)
@@ -312,7 +319,7 @@ namespace LogORM.AdoNet.Oracle
             return paras;
         }
 
-        protected override SelectSql MakeConditionFieldForIn(List<string> ltDataVals)
+        protected override CRUDSql MakeConditionFieldForIn(List<string> ltDataVals)
         {
             return null;
         }

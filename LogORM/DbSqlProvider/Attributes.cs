@@ -5,7 +5,7 @@ namespace LogORM.DbSqlProvider
 {
     public class BaseAttribute : Attribute
     {
-        public string Name { get; set; } = string.Empty;
+        public string Name { get; set; } 
 
         public AttributeType AttrType { get; set; }
 

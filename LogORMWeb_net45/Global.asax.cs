@@ -73,7 +73,7 @@ namespace LogORMWeb_net45
         {
             try
             {
-              //  LogORM.LogApi.HandAndWriteException();
+            LogApi.HandAndWriteException();
             }
             catch
             {
@@ -86,7 +86,7 @@ namespace LogORMWeb_net45
         {
             try
             {
-              //  LogORM.LogApi.WriteServerStopLog();//写停止日志
+              LogApi.WriteServerStopLog();//写停止日志
             }
             catch
             {
@@ -109,7 +109,7 @@ namespace LogORMWeb_net45
             Application.Lock();//锁定后，只有这个Session能够会话        
             try
             {
-                //LogORM.LogApi.IncreaseOnlineVisitNum();
+               LogApi.IncreaseOnlineVisitNum();
             }
             catch (Exception ex)
             {
@@ -131,14 +131,14 @@ namespace LogORMWeb_net45
                 return;
             }
             Application.Lock();
-           // LogORM.LogApi.ReduceOnlineNum();
+           LogApi.ReduceOnlineNum();
             Application.UnLock();
             GlobalSessionEnd();
         }
 
         protected void Application_BeginRequest(object sender, EventArgs e)
         {
-            //LogORM.LogApi.WriteFirstVisitLog();//写初次访问日志
+           LogApi.WriteFirstVisitLog();//写初次访问日志
         }
 
 
