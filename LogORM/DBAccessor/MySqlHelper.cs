@@ -61,7 +61,7 @@ namespace LogORM.AdoNet
         //SELECT FOUND_ROWS();
         //SELECT SQL_CALC_FOUND_ROWS @rowno:=@rowno+1 as rowno,r.* from log_systemmonitor r,(select @rowno:= 0) t where OnlineCnt >1 order by time DESC;
         //SELECT FOUND_ROWS();
-        protected override ExeResEdm GetDataByPage(string tableName, string strWhere, string orderby, int pageIndex, int pageSize, out int totalCnt )
+        protected override ExeResEdm GetDataByPage(string tableName, string strWhere, string orderby, int pageIndex, int pageSize, out int totalCnt)
         {
             totalCnt = 0;
             StringBuilder strSql = new StringBuilder();
@@ -94,7 +94,7 @@ namespace LogORM.AdoNet
             try
             {
                 string text = strSql.ToString();
-                ExeResEdm ds = GetDataSet(strSql.ToString(),null, pms);
+                ExeResEdm ds = GetDataSet(strSql.ToString(), null, pms);
                 if (ds != null && ds.ErrCode == 0 && (ds.ExeModel as DataSet).Tables.Count > 1)
                 {
                     totalCnt = Convert.ToInt32((ds.ExeModel as DataSet).Tables[1].Rows[0][0].ToString());
@@ -111,7 +111,7 @@ namespace LogORM.AdoNet
             }
         }
 
-        protected override ExeResEdm SqlCMD(string sql, Func<DbCommand, object> fun, params DbParameter[] pms)
+        protected override ExeResEdm SqlCMD(string sql, CommandType commandType, Func<DbCommand, object> fun, params DbParameter[] pms)
         {
             ExeResEdm dBResEdm = new ExeResEdm();
             try
@@ -122,7 +122,7 @@ namespace LogORM.AdoNet
                     using (MySqlCommand cmd = new MySqlCommand(sql, con))
                     {
                         con.Open();
-
+                        cmd.CommandType = commandType;
                         if (pms != null && pms.Length > 0)
                         {
                             cmd.Parameters.AddRange((pms));
@@ -162,7 +162,7 @@ namespace LogORM.AdoNet
             }
             catch (Exception ex)
             {
-                dBResEdm.Module = "UpdateDtToDB方法";
+                dBResEdm.Module = "UpdateDtToDB方法" + AddTableNameOrSqlText(strTableName);
                 dBResEdm.ExBody = ex;
                 dBResEdm.ErrCode = 1;
                 return dBResEdm;
@@ -174,6 +174,7 @@ namespace LogORM.AdoNet
         {
             ExeResEdm dBResEdm = new ExeResEdm();
             int n = 0;
+            string strTableName = "";
             try
             {
                 using (MySqlConnection conn = new MySqlConnection(connstr))
@@ -186,6 +187,7 @@ namespace LogORM.AdoNet
 
                         foreach (DataTable dtTemp in dsTables.Tables)
                         {
+                            strTableName = dtTemp.TableName;
                             string strComFields = "*";
                             if (dicDtMainFields != null && dicDtMainFields.Count > 0 && dicDtMainFields.ContainsKey(dtTemp.TableName))
                             {
@@ -219,7 +221,7 @@ namespace LogORM.AdoNet
                     catch (Exception ex)
                     {
                         tsOprate.Rollback();
-                        dBResEdm.Module = "UpdateDsToDB方法";
+                        dBResEdm.Module = "UpdateDsToDB方法" + AddTableNameOrSqlText(strTableName);
                         dBResEdm.ExBody = ex;
                         dBResEdm.ErrCode = 1;
                         return dBResEdm;
@@ -229,7 +231,7 @@ namespace LogORM.AdoNet
             }
             catch (Exception ex)
             {
-                dBResEdm.Module = "UpdateDsToDB方法";
+                dBResEdm.Module = "UpdateDsToDB方法" + AddTableNameOrSqlText(strTableName);
                 dBResEdm.ExBody = ex;
                 dBResEdm.ErrCode = 1;
                 return dBResEdm;
@@ -261,15 +263,15 @@ namespace LogORM.AdoNet
                             cmd.Parameters.AddRange(objOraSqlCon.ltOraParams.ToArray());
                             int intRes = cmd.ExecuteNonQuery();
                             dBResEdm.ExeNum += intRes;
-                            if (objOraSqlCon.intExpectNums >= 0)
+                            if (objOraSqlCon.intExpectNums > 0)
                             {
                                 if (intRes != objOraSqlCon.intExpectNums)
-                                    throw new Exception("Update records not match the expect nums");
+                                    throw new Exception("Update records[" + intRes + "] not match the expect nums[" + objOraSqlCon.intExpectNums + "]");
                             }
-                            else if (objOraSqlCon.intExpectNums != Int16.MinValue)
+                            else if (objOraSqlCon.intExpectNums < 0)
                             {
                                 if (intRes != 0 && intRes != objOraSqlCon.intExpectNums * -1)
-                                    throw new Exception("Update records not match the expect nums");
+                                    throw new Exception("Update records[" + intRes + "] not match the expect nums[" + objOraSqlCon.intExpectNums + "]");
                             }
 
                         }
@@ -299,6 +301,7 @@ namespace LogORM.AdoNet
         {
             ExeResEdm dBResEdm = new ExeResEdm();
             DataSet ds = new DataSet();
+            string curTableName = "";
             try
             {
                 using (MySqlConnection conn = new MySqlConnection(connstr))
@@ -330,13 +333,14 @@ namespace LogORM.AdoNet
                                 dt.TableName = dt.TableName + "_" + (tbNames.Count() + 1);
                             }
                             tbNames.Add(dt.TableName);
+                            curTableName = dt.TableName;
                             cmd.CommandText = objOraSqlCon.strSqlTxt;
                             cmd.Parameters.Clear();
                             if (objOraSqlCon.ltOraParams != null && objOraSqlCon.ltOraParams.Count > 0)
                             {
                                 cmd.Parameters.AddRange(objOraSqlCon.ltOraParams.ToArray());
                             }
-                            MySqlDataAdapter adapter = new MySqlDataAdapter(cmd);                           
+                            MySqlDataAdapter adapter = new MySqlDataAdapter(cmd);
                             adapter.Fill(dt);
                             ds.Tables.Add(dt);
                         }
@@ -345,7 +349,7 @@ namespace LogORM.AdoNet
                     catch (Exception ex)
                     {
                         tsOprate.Rollback();
-                        dBResEdm.Module = "GetDataSets方法";
+                        dBResEdm.Module = "GetDataSets方法" + AddTableNameOrSqlText(curTableName);
                         dBResEdm.ExBody = ex;
                         dBResEdm.ErrCode = 1;
                         return dBResEdm;
@@ -355,7 +359,7 @@ namespace LogORM.AdoNet
             }
             catch (Exception ex)
             {
-                dBResEdm.Module = "GetDataSets方法";
+                dBResEdm.Module = "GetDataSets方法" + AddTableNameOrSqlText(curTableName);
                 dBResEdm.ExBody = ex;
                 dBResEdm.ErrCode = 1;
                 return dBResEdm;

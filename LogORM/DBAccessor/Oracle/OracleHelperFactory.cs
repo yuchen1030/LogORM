@@ -56,7 +56,7 @@ namespace LogORM.AdoNet.Oracle
 
         protected override string GetColumnsNameSql(string strTbName, string strField = "*")
         {
-            string strSqlTxt = "select  " + strField + " from " + strTbName.Trim().Trim(',') + " where rownum = 0";
+            string strSqlTxt = "select  " + strField + " from " + strTbName.Trim().Trim(',') + " where rownum < 1 ";
             return strSqlTxt;
         }
 

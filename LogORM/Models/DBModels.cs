@@ -35,7 +35,7 @@ namespace LogORM.Models
 
         public List<DbParameter> ltOraParams = new List<DbParameter>();
 
-        public int intExpectNums = 1;//若为负数，则表示可取正或可为0，为Int16.MinValue表示不检测数量
+        public int intExpectNums = 0;//若为正数，表示需要相等；若为负数，则表示可取正或可为0；为0表示不检测数量。
     }
 
 

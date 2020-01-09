@@ -9,9 +9,9 @@
 
   <PropertyGroup>
 
-    <Version>1.0.4</Version>
+    <Version>1.0.5</Version>
 
-    <TargetFrameworks>net45;net451;net452;net46;net461;net462;net47;net471;net472;netcoreapp2.0;netcoreapp2.1</TargetFrameworks>
+    <TargetFrameworks>net45;net451;net452;net46;net461;net462;net47;net471;net472;netcoreapp2.0;netcoreapp2.1;netcoreapp2.2;netcoreapp3.0</TargetFrameworks>
 
     <Description>LogORM is an ORM tool on database with Log2Net log collection.This component automatically collects logs when database data changed.
 This component supports.NET platform and.NETCore platform, supports sql server, oracle, mysql, and can be easily extended to other databases.
@@ -66,7 +66,7 @@ It eliminates the need for most of the data-access code and logging code that de
     <PackageReference Include="AutoMapper" Version="7.0.1" />
     <PackageReference Include="CacheManager.Core" Version="1.1.2" />
     <PackageReference Include="CacheManager.StackExchange.Redis" Version="1.1.2" />
-    <PackageReference Include="Log2Net" Version="1.0.7" />
+    <PackageReference Include="Log2Net" Version="1.1.0" />
 
     <PackageReference Include="Newtonsoft.Json" Version="11.0.2" />
 

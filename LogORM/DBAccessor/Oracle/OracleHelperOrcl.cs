@@ -58,7 +58,7 @@ namespace LogORM.AdoNet.Oracle
             return dBResEdm;
         }
 
-        protected override ExeResEdm SqlCMD(string sql, Func<DbCommand, object> fun, params DbParameter[] pms)
+        protected override ExeResEdm SqlCMD(string sql, CommandType commandType, Func<DbCommand, object> fun, params DbParameter[] pms)
         {
             ExeResEdm dBResEdm = new ExeResEdm();
             try
@@ -69,7 +69,7 @@ namespace LogORM.AdoNet.Oracle
                     using (OracleCommand cmd = new OracleCommand(sql, con))
                     {
                         con.Open();
-
+                        cmd.CommandType = commandType;
                         if (pms != null && pms.Length > 0)
                         {
                             cmd.Parameters.AddRange((pms));
@@ -93,7 +93,7 @@ namespace LogORM.AdoNet.Oracle
 
         protected override ExeResEdm UpdateDtToDB(DataTable dtInfos, string strComFields = "*")
         {
-           ExeResEdm dBResEdm = new ExeResEdm();
+            ExeResEdm dBResEdm = new ExeResEdm();
             string strTableName = dtInfos.TableName;
             try
             {
@@ -110,7 +110,7 @@ namespace LogORM.AdoNet.Oracle
             }
             catch (Exception ex)
             {
-                dBResEdm.Module = "UpdateDtToDB方法";
+                dBResEdm.Module = "UpdateDtToDB方法" + AddTableNameOrSqlText(strTableName);
                 dBResEdm.ExBody = ex;
                 dBResEdm.ErrCode = 1;
                 return dBResEdm;
@@ -122,6 +122,7 @@ namespace LogORM.AdoNet.Oracle
         {
             ExeResEdm dBResEdm = new ExeResEdm();
             int n = 0;
+            string strTableName = "";
             try
             {
                 using (OracleConnection conn = new OracleConnection(connstr))
@@ -134,13 +135,14 @@ namespace LogORM.AdoNet.Oracle
                         cmd.Transaction = tsOprate;
                         foreach (DataTable dtTemp in dsTables.Tables)
                         {
+                            strTableName = dtTemp.TableName;
                             string strComFields = "*";
                             if (dicDtMainFields != null && dicDtMainFields.Count > 0 && dicDtMainFields.ContainsKey(dtTemp.TableName))
                             {
                                 strComFields = dicDtMainFields[dtTemp.TableName];
                             }
                             cmd.CommandText = GetColumnsNameSql(dtTemp.TableName, strComFields);
-                            OracleDataAdapter adapter = new OracleDataAdapter(cmd);                                                                    
+                            OracleDataAdapter adapter = new OracleDataAdapter(cmd);
 
                             var dtChanges = dtTemp.GetChanges();
                             adapter.FillSchema(dtChanges, SchemaType.Mapped);//new added
@@ -167,7 +169,7 @@ namespace LogORM.AdoNet.Oracle
                     catch (Exception ex)
                     {
                         tsOprate.Rollback();
-                        dBResEdm.Module = "UpdateDsToDB方法";
+                        dBResEdm.Module = "UpdateDsToDB方法" + AddTableNameOrSqlText(strTableName);
                         dBResEdm.ExBody = ex;
                         dBResEdm.ErrCode = 1;
                         return dBResEdm;
@@ -177,7 +179,7 @@ namespace LogORM.AdoNet.Oracle
             }
             catch (Exception ex)
             {
-                dBResEdm.Module = "UpdateDsToDB方法";
+                dBResEdm.Module = "UpdateDsToDB方法" + AddTableNameOrSqlText(strTableName);
                 dBResEdm.ExBody = ex;
                 dBResEdm.ErrCode = 1;
                 return dBResEdm;
@@ -209,15 +211,15 @@ namespace LogORM.AdoNet.Oracle
                             cmd.Parameters.AddRange(objOraSqlCon.ltOraParams.ToArray());
                             int intRes = cmd.ExecuteNonQuery();
                             dBResEdm.ExeNum += intRes;
-                            if (objOraSqlCon.intExpectNums >= 0)
+                            if (objOraSqlCon.intExpectNums > 0)
                             {
                                 if (intRes != objOraSqlCon.intExpectNums)
-                                    throw new Exception("Update records not match the expect nums");
+                                    throw new Exception("Update records[" + intRes + "] not match the expect nums[" + objOraSqlCon.intExpectNums + "]");
                             }
-                            else if (objOraSqlCon.intExpectNums != Int16.MinValue)
+                            else if (objOraSqlCon.intExpectNums < 0)
                             {
                                 if (intRes != 0 && intRes != objOraSqlCon.intExpectNums * -1)
-                                    throw new Exception("Update records not match the expect nums");
+                                    throw new Exception("Update records[" + intRes + "] not match the expect nums[" + objOraSqlCon.intExpectNums + "]");
                             }
 
                         }
@@ -247,6 +249,7 @@ namespace LogORM.AdoNet.Oracle
         {
             ExeResEdm dBResEdm = new ExeResEdm();
             DataSet ds = new DataSet();
+            string curTableName = "";
             try
             {
                 using (OracleConnection conn = new OracleConnection(connstr))
@@ -278,6 +281,7 @@ namespace LogORM.AdoNet.Oracle
                                 dt.TableName = dt.TableName + "_" + (tbNames.Count() + 1);
                             }
                             tbNames.Add(dt.TableName);
+                            curTableName = dt.TableName;
                             cmd.CommandText = objOraSqlCon.strSqlTxt;
                             cmd.Parameters.Clear();
                             if (objOraSqlCon.ltOraParams != null && objOraSqlCon.ltOraParams.Count > 0)
@@ -293,7 +297,7 @@ namespace LogORM.AdoNet.Oracle
                     catch (Exception ex)
                     {
                         tsOprate.Rollback();
-                        dBResEdm.Module = "GetDataSets方法";
+                        dBResEdm.Module = "GetDataSets方法" + AddTableNameOrSqlText(curTableName);
                         dBResEdm.ExBody = ex;
                         dBResEdm.ErrCode = 1;
                         return dBResEdm;
@@ -303,11 +307,12 @@ namespace LogORM.AdoNet.Oracle
             }
             catch (Exception ex)
             {
-                dBResEdm.Module = "GetDataSets方法";
+                dBResEdm.Module = "GetDataSets方法" + AddTableNameOrSqlText(curTableName);
                 dBResEdm.ExBody = ex;
                 dBResEdm.ErrCode = 1;
                 return dBResEdm;
             }
+
             dBResEdm.ExeModel = ds;
             return dBResEdm;
         }

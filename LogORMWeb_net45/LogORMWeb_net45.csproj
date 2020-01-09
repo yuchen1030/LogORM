@@ -84,8 +84,8 @@
     <Reference Include="InfluxData.Net.Kapacitor, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>..\packages\InfluxData.Net.7.0.1\lib\InfluxData.Net.Kapacitor.dll</HintPath>
     </Reference>
-    <Reference Include="Log2Net, Version=1.0.7.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\Log2Net.1.0.7\lib\net45\Log2Net.dll</HintPath>
+    <Reference Include="Log2Net, Version=1.1.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\Log2Net.1.1.0\lib\net45\Log2Net.dll</HintPath>
     </Reference>
     <Reference Include="Microsoft.CodeDom.Providers.DotNetCompilerPlatform, Version=1.0.8.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
       <HintPath>..\packages\Microsoft.CodeDom.Providers.DotNetCompilerPlatform.1.0.8\lib\net45\Microsoft.CodeDom.Providers.DotNetCompilerPlatform.dll</HintPath>

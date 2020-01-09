@@ -52,7 +52,7 @@ namespace LogORM.AdoNet
         ExeResEdm ExecuteScalar(string cmdText, DBOperUser dbLogMsg = null, params DbParameter[] parameters);
 
         //执行存储过程
-        ExeResEdm ExecuteStoredProcedure(string storedProcedureName, DBOperUser dbLogMsg = null, params DbParameter[] parameters);
+        ExeResEdm ExecuteStoredProcedure(string storedProcedureName, bool bOutputDT = true, DBOperUser dbLogMsg = null, params DbParameter[] parameters);
 
         //执行事务
         ExeResEdm ExecuteTransaction(List<SqlContianer> ltSqls, DBOperUser dbLogMsg = null);
@@ -365,7 +365,7 @@ namespace LogORM.AdoNet
             return dBResEdm;
         }
 
-        public ExeResEdm ExecuteStoredProcedure(string storedProcedureName, DBOperUser dbLogMsg = null, params DbParameter[] parameters)
+        public ExeResEdm ExecuteStoredProcedure(string storedProcedureName, bool bOutputDT = true, DBOperUser dbLogMsg = null, params DbParameter[] parameters)
         {
             #region 存储过程例子，建议将输出参数以select形式输出
             //CREATE PROCEDURE[dbo].[getInsertLog] @userid nvarchar(100), 	@bok INT OUTPUT
@@ -381,22 +381,55 @@ namespace LogORM.AdoNet
             //set @bok = 1;
             //SELECT @bok;
             //SELECT[ID] FROM Log_OperateTrace WHERE[ID] = SCOPE_IDENTITY();
-            //SELECT* FROM Log_OperateTrace
+            //SELECT * FROM Log_OperateTrace
             //END
             #endregion 存储过程例子，建议将输出参数以select形式输出
             DataSet ds = new DataSet();
             parameters = ParameterPrepare(parameters);
-            var res = SqlCMD_DT(storedProcedureName, CommandType.StoredProcedure, adt => adt.Fill(ds), parameters);
-            res.ExeModel = ds;
+            ExeResEdm res = new ExeResEdm();
+            if (bOutputDT)  //update insert 操作的存储过程，也可以使用 SqlCMD_DT 方法
+            {
+                res = SqlCMD_DT(storedProcedureName, CommandType.StoredProcedure, adt => adt.Fill(ds), parameters);
+                res.ExeModel = ds;
+            }
+            else
+            {
+                res = SqlCMD(storedProcedureName, CommandType.StoredProcedure, cmd => cmd.ExecuteNonQuery(), parameters);
+            }
+            List<string> resultList = new List<string>();
+            if (ds != null && ds.Tables.Count > 0)
+            {
+                int rowCnt = 0;
+                foreach (DataTable item in ds.Tables)
+                {
+                    if (item != null)
+                    {
+                        rowCnt += item.Rows.Count;
+                    }
+                }
+                resultList.Add("得到" + ds.Tables.Count + "张表" + rowCnt + "条数据");
+            }
+            else
+            {
+                resultList.Add("影响了" + res.ExeModel + "条记录");
+            }
+            if (parameters != null && parameters.Length > 0)
+            {
+                var outParas = parameters.Where(a => a.Direction != ParameterDirection.Input).ToList();
+                if (outParas.Count > 0)
+                {
+                    resultList.Add("返回值为[" + string.Join(" and  ", outParas.Select(a => a.ParameterName + " = " + a.Value)) + "]");
+                }
+            }
             try
             {
-                WriteLogMsg(dbLogMsg, LogType.存储过程, "名为" + storedProcedureName + "，得到" + ds.Tables.Count + "张表", "ExecuteStoredProcedure方法");
+                string detalMsg = ("执行存储过程" + storedProcedureName + "，" + string.Join("，", resultList)).Trim('，');
+                WriteLogMsg(dbLogMsg, LogType.存储过程, detalMsg, "ExecuteStoredProcedure方法");
             }
             catch
             {
 
             }
-
             return res;
         }
 
@@ -558,6 +591,10 @@ namespace LogORM.AdoNet
             return dBResEdm;
         }
 
+        protected ExeResEdm SqlCMD(string sql, Func<DbCommand, object> fun, params DbParameter[] pms)
+        {
+            return SqlCMD(sql, CommandType.Text, fun, pms);
+        }
         //SQL Server 和 oracle 可以使用此方法，MySQL不行
         protected virtual ExeResEdm GetDataByPage(string tableName, string strWhere, string orderby, int pageIndex, int pageSize, out int totalCnt)
         {
@@ -624,6 +661,15 @@ namespace LogORM.AdoNet
         protected string GetTableNameFromSelectSql(string selectSql)
         {
             return ComDBFun.GetTableNameFromSelectSql(selectSql);
+        }
+
+        protected string AddTableNameOrSqlText(string tableOrSql)
+        {
+            if (string.IsNullOrEmpty(tableOrSql))
+            {
+                return ":" + tableOrSql;
+            }
+            return "";
         }
 
         protected DbParameter[] GetDbParametersFromDic(Dictionary<string, object> dic)
@@ -850,7 +896,7 @@ namespace LogORM.AdoNet
         #region 抽象方法   
         protected abstract ExeResEdm SqlCMD_DT(string cmdText, CommandType commandType, Func<DbDataAdapter, int> fun, params DbParameter[] parameters);
 
-        protected abstract ExeResEdm SqlCMD(string sql, Func<DbCommand, object> fun, params DbParameter[] pms);
+        protected abstract ExeResEdm SqlCMD(string sql, CommandType commandType, Func<DbCommand, object> fun, params DbParameter[] pms);
 
         protected abstract ExeResEdm UpdateDtToDB(DataTable dtInfos, string strComFields = "*");
 

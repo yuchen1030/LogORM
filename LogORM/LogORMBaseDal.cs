@@ -197,9 +197,9 @@ namespace LogORM
         }
 
         //执行存储过程
-        public ExeResEdm ExecuteStoredProcedure(string storedProcedureName, DBOperUser dbLogMsg = null, params DbParameter[] parameters)
+        public ExeResEdm ExecuteStoredProcedure(string storedProcedureName, bool bOutputDT = true, DBOperUser dbLogMsg = null, params DbParameter[] parameters)
         {
-            return baseDB.ExecuteStoredProcedure(storedProcedureName, dbLogMsg, parameters);
+            return baseDB.ExecuteStoredProcedure(storedProcedureName, bOutputDT, dbLogMsg, parameters);
         }
 
         //执行事务
