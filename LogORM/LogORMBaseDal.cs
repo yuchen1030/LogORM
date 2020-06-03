@@ -219,7 +219,15 @@ namespace LogORM
         public ExeResEdm GetDataSet(List<SqlContianer> ltSqls, DBOperUser dbLogMsg = null)
         {
             ltSqls = ltSqls ?? new List<SqlContianer>();
-            ltSqls = ltSqls.Select(a => { var tb = ComDBFun.GetTableNameFromSelectSql(a.strSqlTxt); if (string.IsNullOrEmpty(tb)) a.strSqlTxt = "select * from " + tableName + " where " + a.strSqlTxt; return a; }).ToList();
+            ltSqls = ltSqls.Select(a =>
+            {
+                var tb = ComDBFun.GetTableNameFromSelectSql(a.strSqlTxt);
+                if (string.IsNullOrEmpty(tb))
+                {
+                    a.strSqlTxt = "select * from " + tableName + " where " + a.strSqlTxt;
+                }
+                return a;
+            }).ToList();
             return baseDB.GetDataSet(ltSqls, dbLogMsg);
         }
 
@@ -227,8 +235,8 @@ namespace LogORM
         public ExeResEdm GetDataSet(string cmdText, DBOperUser dbLogMsg = null, params DbParameter[] parameters)
         {
             string sql = "";
-            cmdText = cmdText ?? "";
-            if (cmdText.StartsWith("select", StringComparison.OrdinalIgnoreCase))
+            cmdText = string.IsNullOrEmpty(cmdText) ? "" : cmdText.Trim();
+            if (cmdText.StartsWith("select ", StringComparison.OrdinalIgnoreCase) || cmdText.StartsWith("with ", StringComparison.OrdinalIgnoreCase))
             {
                 sql = cmdText;
             }

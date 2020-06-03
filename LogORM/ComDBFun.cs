@@ -226,7 +226,7 @@ namespace LogORM
 
         internal static string GetTableNameFromSelectSql(string selectSql)
         {
-            if (!string.IsNullOrEmpty(selectSql) && selectSql.Trim().StartsWith("select ", StringComparison.OrdinalIgnoreCase))
+            if (!string.IsNullOrEmpty(selectSql) && (selectSql.Trim().StartsWith("select ", StringComparison.OrdinalIgnoreCase) || selectSql.Trim().StartsWith("with ", StringComparison.OrdinalIgnoreCase)))
             {
                 string fromKey = " from ";
                 int index = selectSql.IndexOf(fromKey, StringComparison.OrdinalIgnoreCase);
